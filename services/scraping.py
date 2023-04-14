@@ -1,20 +1,27 @@
 # import web driver
-import os, sys, time
+import os, sys, time, csv
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ChromeOptions
-from utils import write_to_csv
+
+field_names = ['Name', 'Title', 'Company','Link']
+def write_to_csv(data):    
+    with open('output.csv', 'a', newline='', encoding="utf-8") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames = field_names)
+        writer.writerows(data)
 
 
 class ScrapingService:
     sales_url = "https://www.linkedin.com/sales/login"
 
-    def __init__(self, url, number_of_contacts):
+    def __init__(self, url, start_page, end_page):
         self.url = url
-        self.number_of_contacts = number_of_contacts
+        self.start_page = start_page
+        self.end_page = end_page
         self.speed = 1  # lower is faster
+        self.total_scroll_time = 25  # seconds
         self.get_creds()
         self.init_driver()
         self.login()
@@ -24,16 +31,18 @@ class ScrapingService:
         self.linkedin_password = os.environ['LINKEDIN_PASSWORD']
 
     def init_driver(self):
-        opts = ChromeOptions()
-        # opts.add_argument("--headless")
-        opts.add_argument("--no-sandbox")
-        opts.add_argument("--disable-dev-shm-usage")
-        opts.add_argument("--disable-gpu")
-        opts.add_argument("--disable-extensions")
-        opts.add_argument("--disable-dev-shm-usage")
-        opts.add_argument("--disable-setuid-sandbox")
+        options = ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-setuid-sandbox")
+        options.add_argument("--disable-logging")
+        options.add_argument("--log-level=3")
         self.browser = webdriver.Chrome(
-            '/usr/local/bin/chromedriver', options=opts)
+            '/usr/local/bin/chromedriver', options=options)
         self.browser.get(self.sales_url)
         print("Successfully initiated Web Driver")
 
@@ -55,22 +64,21 @@ class ScrapingService:
             sys.stdout.write("\033[F")
             time.sleep(1)
     
-    def scroll_down(self):
-        try:
-            start = time.time()
-            initialScroll = 0
-            finalScroll = 500
-            while True:
+    def scroll_till_end(self):
+        start = time.time()
+        initialScroll = 0
+        finalScroll = 500
+        while True:
+            try:
                 self.browser.execute_script(f"document.getElementById('search-results-container').scroll({initialScroll},{finalScroll})")
                 initialScroll = finalScroll
                 finalScroll += 500
                 self.wait(2*self.speed)
                 end = time.time()
-                if round(end - start) > 15:
+                if round(end - start) > self.total_scroll_time:
                     break
-        except Exception as e:
-            print("Error in scrolling down, continuing...")
-            print(e)
+            except Exception as e:
+                print("Error in scrolling down, continuing...", str(e))
     
     def next_page(self):
         btn=self.browser.find_elements(By.CSS_SELECTOR,"[aria-label='Next']")
@@ -82,7 +90,7 @@ class ScrapingService:
         self.wait(1*self.speed)
     
     def get_page_data(self):
-        self.scroll_down()
+        self.scroll_till_end()
 
         extracted_data=[]
         src = self.browser.page_source
@@ -114,9 +122,12 @@ class ScrapingService:
         
     
     def start_scraping(self):
+        total_pages = self.end_page - self.start_page
+        self.url = self.url + "&page=" + str(self.start_page)
+
         self.browser.get(self.url)
         self.wait(5)
-        total_pages = (self.number_of_contacts//25)+1
-        for i in range(total_pages):
+        
+        for _ in range(total_pages):
             self.get_page_data()
             self.next_page()
