@@ -32,7 +32,7 @@ if __name__ == "__main__":
     print("start_page: ", start_page)
     print("end_page: ", end_page)
 
-    scraping_service = ScrapingService(sales_navigator_url, start_page, end_page)
+    scraping_service = ScrapingService(sales_navigator_url, start_page, end_page, extraction_id)
     scraping_service.start_scraping()
 
     # output_path = OUTPUT_UPLOAD_PATH.format(

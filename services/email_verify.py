@@ -2,8 +2,9 @@ import requests, asyncio, aiohttp, nameparser, time
 from utils import format_name, fetch, add_to_file
 
 class EmailVerify:
-    def __init__(self, linkedin_data):
+    def __init__(self, linkedin_data, extraction_id):
         self.linkedin_data = linkedin_data
+        self.extraction_id = extraction_id
 
         self.company_names = []
         self.company_domains = {}
@@ -85,7 +86,7 @@ class EmailVerify:
                     break
                 if email_verification_result["deliverability"] == "DELIVERABLE":
                     print("email is verified, adding to output file: ", email)
-                    add_to_file('verified_emails.csv', name, email)
+                    add_to_file(f'{self.extraction_id}_emails.csv', name, email)
                     self.verified_emails.append(email)
                     break
             

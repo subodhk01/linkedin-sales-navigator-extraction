@@ -18,11 +18,12 @@ def write_to_csv(data):
 class ScrapingService:
     sales_url = "https://www.linkedin.com/sales/login"
 
-    def __init__(self, url, start_page, end_page):
+    def __init__(self, url, start_page, end_page, extraction_id):
         self.url = url
         self.start_page = start_page
         self.current_page = start_page
         self.end_page = end_page
+        self.extraction_id = extraction_id
         self.speed = 1  # lower is faster
         self.total_scroll_time = 25  # seconds
         self.get_creds()
@@ -149,7 +150,7 @@ class ScrapingService:
 
     def process_extracted_data(self, extracted_data):
         print("Processing extracted data")
-        email_verify = EmailVerify(linkedin_data=extracted_data)
+        email_verify = EmailVerify(linkedin_data=extracted_data, extraction_id=self.extraction_id)
         email_verify.process_data()
         print("Successfully processed extracted data")
         
