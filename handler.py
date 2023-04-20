@@ -35,23 +35,23 @@ if __name__ == "__main__":
     scraping_service = ScrapingService(sales_navigator_url, start_page, end_page)
     scraping_service.start_scraping()
 
-    output_path = OUTPUT_UPLOAD_PATH.format(
-        extraction_id=extraction_id,
-        start_page=start_page,
-        end_page=end_page
-    )
+    # output_path = OUTPUT_UPLOAD_PATH.format(
+    #     extraction_id=extraction_id,
+    #     start_page=start_page,
+    #     end_page=end_page
+    # )
 
-    s3.upload_object(
-        BUCKET_NAME, output_path, "output.csv"
-    )
-    r = requests.post(
-        f"{BACKEND_URL}/extraction/stage1/complete/",
-        json={
-            "uuid": extraction_id,
-            "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{output_path}"
-        }
-    )
-    print(r.json())
+    # s3.upload_object(
+    #     BUCKET_NAME, output_path, "output.csv"
+    # )
+    # r = requests.post(
+    #     f"{BACKEND_URL}/extraction/stage1/complete/",
+    #     json={
+    #         "uuid": extraction_id,
+    #         "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{output_path}"
+    #     }
+    # )
+    # print(r.json())
 
 
         

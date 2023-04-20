@@ -6,6 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver import ChromeOptions
 
+from services.email_verify import EmailVerify
+
 field_names = ['Name', 'Title', 'Company','Link']
 def write_to_csv(data):    
     with open('output.csv', 'a', newline='', encoding="utf-8") as csvfile:
@@ -19,6 +21,7 @@ class ScrapingService:
     def __init__(self, url, start_page, end_page):
         self.url = url
         self.start_page = start_page
+        self.current_page = start_page
         self.end_page = end_page
         self.speed = 1  # lower is faster
         self.total_scroll_time = 25  # seconds
@@ -65,10 +68,13 @@ class ScrapingService:
             time.sleep(1)
     
     def scroll_till_end(self):
+        error_count = 0
+        self.wait(3*self.speed)
         start = time.time()
         initialScroll = 0
         finalScroll = 500
         while True:
+            self.wait(1*self.speed)
             try:
                 self.browser.execute_script(f"document.getElementById('search-results-container').scroll({initialScroll},{finalScroll})")
                 initialScroll = finalScroll
@@ -78,15 +84,23 @@ class ScrapingService:
                 if round(end - start) > self.total_scroll_time:
                     break
             except Exception as e:
-                print("Error in scrolling down, continuing...", str(e))
+                print("Error in scrolling down, continuing...")
+                error_count += 1
+                if error_count > 5:
+                    break
     
     def next_page(self):
+        self.wait(1*self.speed)
         btn=self.browser.find_elements(By.CSS_SELECTOR,"[aria-label='Next']")
-        print("Moving to next page -> ")
+        print(f"Moving to page {self.current_page + 1}...")
         if btn[0].is_enabled():
-            btn[0].click()
+            if btn[0].is_displayed():
+                btn[0].click()
+            else:
+                print("Next button not visible")
         else:
             print("No more pages")
+        self.current_page  = self.current_page + 1
         self.wait(1*self.speed)
     
     def get_page_data(self):
@@ -118,9 +132,10 @@ class ScrapingService:
                 print(j)
                 print(e)
             
-        write_to_csv(extracted_data)      
-        
-    
+        write_to_csv(extracted_data)
+        self.process_extracted_data(extracted_data)
+        print(f"Successfully extracted data from page {self.current_page}")
+          
     def start_scraping(self):
         total_pages = self.end_page - self.start_page
         self.url = self.url + "&page=" + str(self.start_page)
@@ -131,3 +146,10 @@ class ScrapingService:
         for _ in range(total_pages):
             self.get_page_data()
             self.next_page()
+
+    def process_extracted_data(self, extracted_data):
+        print("Processing extracted data")
+        email_verify = EmailVerify(linkedin_data=extracted_data)
+        email_verify.process_data()
+        print("Successfully processed extracted data")
+        
