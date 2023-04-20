@@ -7,7 +7,7 @@ async def fetch(url, session):
     async with session.get(url) as response:
         return await response.json()
 
-def add_to_file(file_name, data):
+def add_to_file(file_name, name, data):
     with open(file_name, 'a') as f:
-        f.write(data + '\n')
+        f.write(name + "," + data + '\n')
         

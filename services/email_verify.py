@@ -85,7 +85,7 @@ class EmailVerify:
                     break
                 if email_verification_result["deliverability"] == "DELIVERABLE":
                     print("email is verified, adding to output file: ", email)
-                    add_to_file('verified_emails.csv', email)
+                    add_to_file('verified_emails.csv', name, email)
                     self.verified_emails.append(email)
                     break
             
