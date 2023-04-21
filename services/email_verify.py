@@ -78,7 +78,11 @@ class EmailVerify:
             ]
 
             for email in email_combinations:
-                email_verification_result = asyncio.run(self.verify_using_abstactapi(email))
+                try:
+                    email_verification_result = asyncio.run(self.verify_using_abstactapi(email))
+                except Exception as e:
+                    print("Error in email verification: ", e)
+                    continue
                 # print("email_verification_result: ", email_verification_result)
                 print("checking email: ", [first_name, last_name, company_domain, email, email_verification_result["deliverability"]])
                 if email_verification_result["is_catchall_email"]["value"]:
