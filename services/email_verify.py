@@ -12,7 +12,7 @@ class EmailVerify:
         self.verified_emails = []
     
     async def verify_using_abstactapi(self, email):
-        url = f"https://emailvalidation.abstractapi.com/v1/?api_key=41645272c9a44a8aba470447449d231f&email={email}"
+        url = f"https://emailvalidation.abstractapi.com/v1/?api_key=f043961efb3f4668bb4239fc8a9255d4&email={email}"
         async with aiohttp.ClientSession() as session:
             task = asyncio.create_task( fetch(url, session) )
             await asyncio.gather(task)
