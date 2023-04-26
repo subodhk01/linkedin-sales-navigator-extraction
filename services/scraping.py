@@ -1,5 +1,8 @@
 # import web driver
-import os, sys, time, csv
+import os
+import sys
+import time
+import csv
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -8,10 +11,12 @@ from selenium.webdriver import ChromeOptions
 
 from services.email_verify import EmailVerify
 
-field_names = ['Name', 'Title', 'Company','Link']
-def write_to_csv(data):    
+field_names = ['Name', 'Title', 'Company', 'Link']
+
+
+def write_to_csv(data):
     with open('output.csv', 'a', newline='', encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames = field_names)
+        writer = csv.DictWriter(csvfile, fieldnames=field_names)
         writer.writerows(data)
 
 
@@ -29,7 +34,7 @@ class ScrapingService:
         self.get_creds()
         self.init_driver()
         self.login()
-        
+
     def get_creds(self):
         self.linkedin_username = os.environ['LINKEDIN_USERNAME']
         self.linkedin_password = os.environ['LINKEDIN_PASSWORD']
@@ -61,13 +66,13 @@ class ScrapingService:
             'xpath', '//*[@type="submit"]')
         log_in_button.click()
         print("Successfully logged in")
-    
+
     def wait(self, wait_time):
         for i in range(wait_time):
             print(f"Waiting for {wait_time} seconds" + "." * i)
             sys.stdout.write("\033[F")
             time.sleep(1)
-    
+
     def scroll_till_end(self):
         error_count = 0
         self.wait(3*self.speed)
@@ -77,7 +82,8 @@ class ScrapingService:
         while True:
             self.wait(1*self.speed)
             try:
-                self.browser.execute_script(f"document.getElementById('search-results-container').scroll({initialScroll},{finalScroll})")
+                self.browser.execute_script(
+                    f"document.getElementById('search-results-container').scroll({initialScroll},{finalScroll})")
                 initialScroll = finalScroll
                 finalScroll += 500
                 self.wait(2*self.speed)
@@ -89,10 +95,11 @@ class ScrapingService:
                 error_count += 1
                 if error_count > 2:
                     break
-    
+
     def next_page(self):
         self.wait(1*self.speed)
-        btn=self.browser.find_elements(By.CSS_SELECTOR,"[aria-label='Next']")
+        btn = self.browser.find_elements(
+            By.CSS_SELECTOR, "[aria-label='Next']")
         print(f"Moving to page {self.current_page + 1}...")
         if btn[0].is_enabled():
             if btn[0].is_displayed():
@@ -101,54 +108,56 @@ class ScrapingService:
                 print("Next button not visible")
         else:
             print("No more pages")
-        self.current_page  = self.current_page + 1
+        self.current_page = self.current_page + 1
         self.wait(1*self.speed)
-    
+
     def get_page_data(self):
         self.scroll_till_end()
 
-        extracted_data=[]
+        extracted_data = []
         src = self.browser.page_source
         soup = BeautifulSoup(src, 'lxml')
         content = soup.find('ol', {'class': 'artdeco-list background-color-white _border-search-results_1igybl'})
         if content:
-            list_emp=content.find_all('li', {'class': 'artdeco-list__item pl3 pv3'})
-            for j in list_emp:
-                name=j.find('span', {'data-anonymize': 'person-name'})
-                title=j.find('span', {'data-anonymize': 'title'})
-                cname=j.find('a', {'class': 'ember-view t-black--light t-bold inline-block'})
-                link=j.find('a', {'class': 'ember-view'})
+            list_items = content.find_all(
+                'li', {'class': 'artdeco-list__item pl3 pv3'})
+            for item in list_items:
+                name = item.find('span', {'data-anonymize': 'person-name'})
+                title = item.find('span', {'data-anonymize': 'title'})
+                cname = item.find('a', {'class': 'ember-view t-black--light t-bold inline-block'})
+                link = item.find('a', {'class': 'ember-view'})
                 try:
-                    dict_emp={'Name': '', 'Title': "", 'Company': '', 'Link': ''}
+                    data_dict = {'Name': '', 'Title': "", 'Company': '', 'Link': ''}
                     if name:
-                        dict_emp["Name"]=(name.text)
+                        data_dict["Name"] = (name.text)
                     if title:
-                        dict_emp["Title"]=(title.text)
+                        data_dict["Title"] = (title.text)
                     if cname:
-                        dict_emp["Company"]=(cname.text.strip())
+                        data_dict["Company"] = (cname.text.strip())
                     if link:
-                        dict_emp["Link"]=(link['href'])
-                    extracted_data.append(dict_emp)
+                        data_dict["Link"] = (link['href'])
+                    extracted_data.append(data_dict)
                 except Exception as e:
                     print("Error in extracting data")
-                    print(j)
+                    print(item)
                     print(e)
-                
+
             write_to_csv(extracted_data)
             self.process_extracted_data(extracted_data)
             print(f"Successfully extracted data from page {self.current_page}")
             return True
         else:
-            print(f"No data found on page {self.current_page}, please check url: {self.url}")
+            print(
+                f"No data found on page {self.current_page}, please check url: {self.url}")
             return False
-          
+
     def start_scraping(self):
         total_pages = self.end_page - self.start_page
         self.url = self.url + "&page=" + str(self.start_page)
 
         self.browser.get(self.url)
         self.wait(5)
-        
+
         for _ in range(total_pages):
             run_page_data = self.get_page_data()
             if run_page_data:
@@ -158,7 +167,7 @@ class ScrapingService:
 
     def process_extracted_data(self, extracted_data):
         print("Processing extracted data")
-        email_verify = EmailVerify(linkedin_data=extracted_data, extraction_id=self.extraction_id)
+        email_verify = EmailVerify(
+            linkedin_data=extracted_data, extraction_id=self.extraction_id)
         email_verify.process_data()
         print("Successfully processed extracted data")
-        
