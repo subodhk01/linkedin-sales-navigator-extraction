@@ -87,7 +87,7 @@ class ScrapingService:
             except Exception as e:
                 print("Error in scrolling down, continuing...")
                 error_count += 1
-                if error_count > 5:
+                if error_count > 2:
                     break
     
     def next_page(self):
@@ -110,32 +110,37 @@ class ScrapingService:
         extracted_data=[]
         src = self.browser.page_source
         soup = BeautifulSoup(src, 'lxml')
-        cont = soup.find('ol', {'class': 'artdeco-list background-color-white _border-search-results_1igybl'})
-        list_emp=cont.find_all('li', {'class': 'artdeco-list__item pl3 pv3'})
-        for j in list_emp:
-            name=j.find('span', {'data-anonymize': 'person-name'})
-            title=j.find('span', {'data-anonymize': 'title'})
-            cname=j.find('a', {'class': 'ember-view t-black--light t-bold inline-block'})
-            link=j.find('a', {'class': 'ember-view'})
-            try:
-                dict_emp={'Name': '', 'Title': "", 'Company': '', 'Link': ''}
-                if name:
-                    dict_emp["Name"]=(name.text)
-                if title:
-                    dict_emp["Title"]=(title.text)
-                if cname:
-                    dict_emp["Company"]=(cname.text.strip())
-                if link:
-                    dict_emp["Link"]=(link['href'])
-                extracted_data.append(dict_emp)
-            except Exception as e:
-                print("Error in extracting data")
-                print(j)
-                print(e)
-            
-        write_to_csv(extracted_data)
-        self.process_extracted_data(extracted_data)
-        print(f"Successfully extracted data from page {self.current_page}")
+        content = soup.find('ol', {'class': 'artdeco-list background-color-white _border-search-results_1igybl'})
+        if content:
+            list_emp=content.find_all('li', {'class': 'artdeco-list__item pl3 pv3'})
+            for j in list_emp:
+                name=j.find('span', {'data-anonymize': 'person-name'})
+                title=j.find('span', {'data-anonymize': 'title'})
+                cname=j.find('a', {'class': 'ember-view t-black--light t-bold inline-block'})
+                link=j.find('a', {'class': 'ember-view'})
+                try:
+                    dict_emp={'Name': '', 'Title': "", 'Company': '', 'Link': ''}
+                    if name:
+                        dict_emp["Name"]=(name.text)
+                    if title:
+                        dict_emp["Title"]=(title.text)
+                    if cname:
+                        dict_emp["Company"]=(cname.text.strip())
+                    if link:
+                        dict_emp["Link"]=(link['href'])
+                    extracted_data.append(dict_emp)
+                except Exception as e:
+                    print("Error in extracting data")
+                    print(j)
+                    print(e)
+                
+            write_to_csv(extracted_data)
+            self.process_extracted_data(extracted_data)
+            print(f"Successfully extracted data from page {self.current_page}")
+            return True
+        else:
+            print(f"No data found on page {self.current_page}, please check url: {self.url}")
+            return False
           
     def start_scraping(self):
         total_pages = self.end_page - self.start_page
@@ -145,8 +150,11 @@ class ScrapingService:
         self.wait(5)
         
         for _ in range(total_pages):
-            self.get_page_data()
-            self.next_page()
+            run_page_data = self.get_page_data()
+            if run_page_data:
+                self.next_page()
+            else:
+                break
 
     def process_extracted_data(self, extracted_data):
         print("Processing extracted data")
