@@ -1,23 +1,25 @@
-import sys, os, csv, requests, environ
+import sys, os, requests, environ
 from services.scraping import ScrapingService
 from services.s3 import S3
 
+from multiprocessing import Process
+
 env = environ.Env()
 env.read_env()
+s3 = S3()
 
-BACKEND_URL = os.environ['BACKEND_URL']
-BACKEND_URL = BACKEND_URL.strip("/")
+BACKEND_URL = os.environ['BACKEND_URL'].strip("/")
 print(f"Backend URL: {BACKEND_URL}")
 
-BUCKET_NAME = "emailer-backend-static"
+WORKERS = 4
 
-OUTPUT_UPLOAD_PATH = "linkedin_data/{extraction_id}/output-{start_page}-to-{end_page}.csv"
-OUTPUT_FILE_NAME = "output.csv"
-
-s3 = S3()
+def run_service(sales_navigator_url, start_page, end_page, extraction_id):
+    scraping_service = ScrapingService(sales_navigator_url, start_page, end_page, extraction_id)
+    scraping_service.start_scraping()
 
 if __name__ == "__main__":
     extraction_id = sys.argv[1]
+    number_of_workers = sys.argv[2] if len(sys.argv) > 2 else WORKERS
     print(f"Extraction ID: {extraction_id}")
 
     r = requests.get(f"{BACKEND_URL}/extraction/detail/{extraction_id}/")
@@ -32,26 +34,20 @@ if __name__ == "__main__":
     print("start_page: ", start_page)
     print("end_page: ", end_page)
 
-    scraping_service = ScrapingService(sales_navigator_url, start_page, end_page, extraction_id)
-    scraping_service.start_scraping()
+    page_offset = (end_page - start_page)/number_of_workers
 
-    # output_path = OUTPUT_UPLOAD_PATH.format(
-    #     extraction_id=extraction_id,
-    #     start_page=start_page,
-    #     end_page=end_page
-    # )
-
-    # s3.upload_object(
-    #     BUCKET_NAME, output_path, "output.csv"
-    # )
-    # r = requests.post(
-    #     f"{BACKEND_URL}/extraction/stage1/complete/",
-    #     json={
-    #         "uuid": extraction_id,
-    #         "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{output_path}"
-    #     }
-    # )
-    # print(r.json())
-
-
-        
+    workers = []
+    for i in range(number_of_workers):
+        start = int(start_page + i*page_offset)
+        end = int(start_page + (i+1)*page_offset) - 1
+        if i == number_of_workers - 1:
+            end = end_page
+        print(f"Worker {i}: start_page: {start}, end_page: {end}")
+        p = Process(target=run_service, args=(sales_navigator_url, start, end, extraction_id))
+        workers.append(p)
+        p.start()
+    
+    for worker in workers:
+        worker.join()
+    
+    print("All workers finished")
