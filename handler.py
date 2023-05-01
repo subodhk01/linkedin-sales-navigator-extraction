@@ -20,6 +20,7 @@ def run_service(sales_navigator_url, start_page, end_page, extraction_id):
 if __name__ == "__main__":
     extraction_id = sys.argv[1]
     number_of_workers = sys.argv[2] if len(sys.argv) > 2 else WORKERS
+    number_of_workers = int(number_of_workers)
     print(f"Extraction ID: {extraction_id}")
 
     r = requests.get(f"{BACKEND_URL}/extraction/detail/{extraction_id}/")
