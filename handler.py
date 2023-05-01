@@ -1,15 +1,16 @@
-import sys, os, requests, environ
+import sys, os, requests, environ, time
 from services.scraping import ScrapingService
 from services.s3 import S3
+from utils import split_start_end
 
 from multiprocessing import Process
+from threading import Thread
 
 env = environ.Env()
 env.read_env()
 s3 = S3()
 
 BACKEND_URL = os.environ['BACKEND_URL'].strip("/")
-print(f"Backend URL: {BACKEND_URL}")
 
 WORKERS = 4
 
@@ -37,12 +38,11 @@ if __name__ == "__main__":
 
     page_offset = (end_page - start_page)/number_of_workers
 
+    start_time = time.time()
     workers = []
-    for i in range(number_of_workers):
-        start = int(start_page + i*page_offset)
-        end = int(start_page + (i+1)*page_offset) - 1
-        if i == number_of_workers - 1:
-            end = end_page
+    for i, split in enumerate(split_start_end(start_page, end_page, number_of_workers)):
+        start = split[0]
+        end = split[1]
         print(f"Worker {i}: start_page: {start}, end_page: {end}")
         p = Process(target=run_service, args=(sales_navigator_url, start, end, extraction_id))
         workers.append(p)
@@ -51,4 +51,11 @@ if __name__ == "__main__":
     for worker in workers:
         worker.join()
     
+    total_pages = end_page - start_page + 1
+    total_time = round(time.time() - start_time, 2)
+    time_per_page = round(total_time/total_pages, 2)
+    
     print("All workers finished")
+    print(f"Total time: {total_time} seconds for {total_pages} pages")
+    print(f"Time per page: {time_per_page} seconds")
+    

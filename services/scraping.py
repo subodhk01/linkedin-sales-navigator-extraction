@@ -1,8 +1,5 @@
 # import web driver
-import os
-import sys
-import time
-import csv
+import os, sys, time, csv, asyncio
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -29,7 +26,7 @@ class ScrapingService:
         self.current_page = start_page
         self.end_page = end_page
         self.extraction_id = extraction_id
-        self.speed = 1  # lower is faster
+        self.speed = 5  # lower is faster
         self.total_scroll_time = 25  # seconds
         self.get_creds()
         self.init_driver()
@@ -68,10 +65,12 @@ class ScrapingService:
         print("Successfully logged in")
 
     def wait(self, wait_time):
-        for i in range(wait_time):
-            print(f"Waiting for {wait_time} seconds" + "." * i)
-            sys.stdout.write("\033[F")
-            time.sleep(1)
+        print(f"Waiting for {wait_time} seconds")
+        asyncio.sleep(wait_time)
+        # for i in range(wait_time):
+        #     print(f"Waiting for {wait_time} seconds" + "." * i)
+        #     sys.stdout.write("\033[F")
+        #     asyncio.sleep(1)
 
     def scroll_till_end(self):
         error_count = 0
@@ -91,7 +90,7 @@ class ScrapingService:
                 if round(end - start) > self.total_scroll_time:
                     break
             except Exception as e:
-                print("Error in scrolling down, continuing...")
+                print("Error in scrolling down, continuing...", str(e))
                 error_count += 1
                 if error_count > 2:
                     break
@@ -152,11 +151,12 @@ class ScrapingService:
             return False
 
     def start_scraping(self):
-        total_pages = self.end_page - self.start_page
-        self.url = self.url + "&page=" + str(self.start_page)
+        total_pages = self.end_page - self.start_page + 1
 
+        self.url = self.url + "&page=" + str(self.start_page)
         self.browser.get(self.url)
-        self.wait(5)
+
+        self.wait(2*self.speed)
 
         for _ in range(total_pages):
             run_page_data = self.get_page_data()
@@ -166,7 +166,7 @@ class ScrapingService:
                 break
 
     def process_extracted_data(self, extracted_data):
-        print("Processing extracted data")
+        print("\nProcessing extracted data")
         email_verify = EmailVerify(
             linkedin_data=extracted_data, extraction_id=self.extraction_id)
         email_verify.process_data()

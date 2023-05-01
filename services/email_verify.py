@@ -5,6 +5,7 @@ class EmailVerify:
     def __init__(self, linkedin_data, extraction_id):
         self.linkedin_data = linkedin_data
         self.extraction_id = extraction_id
+        self.email_validation_api_calls = 0
 
         self.company_names = []
         self.company_domains = {}
@@ -16,6 +17,7 @@ class EmailVerify:
         async with aiohttp.ClientSession() as session:
             task = asyncio.create_task( fetch(url, session) )
             await asyncio.gather(task)
+            self.email_validation_api_calls += 1
             task_result = task.result()
             return task_result
         # response = requests.get()
@@ -41,10 +43,11 @@ class EmailVerify:
 
     def process_data(self):
         self.company_names = [ data_item["Company"] for data_item in self.linkedin_data if data_item["Company"] ]
+        print("Total companies: ", len(self.company_names))
         start_time = time.time()
         asyncio.run(self.get_company_domains())
-        print("It took %s seconds to get all company domains" % (time.time() - start_time))
-        print("company domains: ", self.company_domains)
+        # print("It took %s seconds to get all company domains" % (time.time() - start_time))
+        # print("company domains: ", self.company_domains)
 
         for data_item in self.linkedin_data:
             name = data_item["Name"]
@@ -84,7 +87,7 @@ class EmailVerify:
                     print("Error in email verification: ", e)
                     continue
                 # print("email_verification_result: ", email_verification_result)
-                print("checking email: ", [first_name, last_name, company_domain, email, email_verification_result["deliverability"]])
+                # print("checking email: ", [first_name, last_name, company_domain, email, email_verification_result["deliverability"]])
                 if email_verification_result["is_catchall_email"]["value"]:
                     print("email is catchall, skipping")
                     break
@@ -94,7 +97,8 @@ class EmailVerify:
                     self.verified_emails.append(email)
                     break
             
-        print("verified emails: ", self.verified_emails)
+        print("Total verified emails: ", len(self.verified_emails))
+        print("Total API calls: ", self.email_validation_api_calls)
                 
 
             
