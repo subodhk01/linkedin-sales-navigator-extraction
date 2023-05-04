@@ -28,3 +28,4 @@ urllib3==1.26.13
 wsproto==1.2.0
 nameparser==1.1.2
 aiohttp==3.8.4
+PyVirtualDisplay==3.0
