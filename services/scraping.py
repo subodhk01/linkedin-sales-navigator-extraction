@@ -20,8 +20,8 @@ def get_user_agent():
     ]
     return user_agents[random.randint(0, len(user_agents) - 1)]
 
-def write_to_csv(data):
-    with open('output.csv', 'a', newline='', encoding="utf-8") as csvfile:
+def write_to_csv(data, file_name):
+    with open(file_name, 'a', newline='', encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=field_names)
         writer.writerows(data)
 
@@ -47,7 +47,7 @@ class ScrapingService:
 
     def init_driver(self):
         options = ChromeOptions()
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
@@ -75,7 +75,7 @@ class ScrapingService:
             'xpath', '//*[@type="submit"]')
         log_in_button.click()
         print("Successfully logged in")
-        time.sleep(1000)
+        time.sleep(1)
 
     def wait(self, wait_time, wait_message=""):
         print(f"Waiting for {wait_time} seconds : {wait_message}")
@@ -86,13 +86,27 @@ class ScrapingService:
         #     sys.stdout.write("\033[F")
         #     time.sleep(1)
 
+    def get_page_items(self):
+        src = self.browser.page_source
+        soup = BeautifulSoup(src, 'lxml')
+        content = soup.find('ol', {'class': 'artdeco-list background-color-white _border-search-results_1igybl'})
+        if content:
+            list_items = content.find_all(
+                'li', {'class': 'artdeco-list__item pl3 pv3'}
+            )
+            return list_items
+        else:
+            return []
+
     def scroll_results_container(self):        
-        scroll_step = 200
+        scroll_step = 500
         scroll_height = 0
         for _ in range(self.total_scroll_time):
             self.wait(1, "Scrolling")
             self.browser.execute_script(f"document.getElementById('search-results-container').scroll(0,{scroll_height})")
             scroll_height += scroll_step
+            page_items = self.get_page_items()
+            print(f"Found {len(page_items)} items on page {self.current_page}")
         
             
 
@@ -142,7 +156,7 @@ class ScrapingService:
                     print(item)
                     print(e)
 
-            write_to_csv(extracted_data)
+            write_to_csv(extracted_data, f"linkedinoutput_{self.extraction_id}.csv")
             self.process_extracted_data(extracted_data)
             print(f"Successfully extracted data from page {self.current_page}")
             return True
